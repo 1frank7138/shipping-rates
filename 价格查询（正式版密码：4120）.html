@@ -1,0 +1,2974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国际海运运价查询系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            color: #2c3e50;
+            position: relative;
+        }
+        
+        .dark-mode header {
+            color: #e0e0e0;
+        }
+        
+        h1 {
+            font-size: 3.2rem;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .dark-mode .subtitle {
+            color: #aaa;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin: 25px 0;
+            transition: transform 0.3s ease;
+            border: 1px solid #eaeaea;
+        }
+        
+        .dark-mode .card {
+            background: #1e1e1e;
+            border-color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card.hidden {
+            display: none;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark-mode .card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .search-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .search-group {
+            flex: 1;
+            min-width: 280px;
+        }
+        
+        .search-group label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #1a6cff;
+            font-size: 1.1rem;
+        }
+        
+        .dark-mode .search-group label {
+            color: #64b5f6;
+        }
+        
+        .search-container {
+            position: relative;
+        }
+        
+        .search-container input {
+            width: 100%;
+            padding: 16px 25px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+            color: #333;
+        }
+        
+        .dark-mode .search-container input {
+            background: #2d2d2d;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        
+        .search-container input:focus {
+            outline: none;
+            border-color: #4da0ff;
+            box-shadow: 0 0 0 3px rgba(77, 160, 255, 0.2);
+        }
+        
+        .dark-mode .search-container input:focus {
+            border-color: #64b5f6;
+            box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.3);
+        }
+        
+        .search-container input::placeholder {
+            color: #aaa;
+        }
+        
+        .dark-mode .search-container input::placeholder {
+            color: #777;
+        }
+        
+        .dropdown {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .dark-mode .dropdown {
+            background: #2d2d2d;
+            border-color: #444;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dropdown-item {
+            padding: 14px 25px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dark-mode .dropdown-item {
+            border-bottom-color: #333;
+        }
+        
+        .dropdown-item:hover {
+            background: #f8faff;
+        }
+        
+        .dark-mode .dropdown-item:hover {
+            background: #333;
+        }
+        
+        .port-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .port-name {
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .dark-mode .port-name {
+            color: #e0e0e0;
+        }
+        
+        .port-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .port-province {
+            font-size: 0.9rem;
+            background: #e6f0ff;
+            color: #1a6cff;
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+        
+        .dark-mode .port-province {
+            background: rgba(26, 108, 255, 0.2);
+            color: #90caf9;
+        }
+        
+        .port-region {
+            font-size: 0.9rem;
+            background: #e0f7ff;
+            color: #00a8e8;
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+        
+        .dark-mode .port-region {
+            background: rgba(0, 168, 232, 0.2);
+            color: #80deea;
+        }
+        
+        .port-area {
+            font-size: 0.9rem;
+            background: #e0fff0;
+            color: #00b894;
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+        
+        .dark-mode .port-area {
+            background: rgba(0, 184, 148, 0.2);
+            color: #80cbc4;
+        }
+        
+        .port-code {
+            font-size: 0.9rem;
+            color: #777;
+            padding: 5px 0;
+        }
+        
+        .dark-mode .port-code {
+            color: #aaa;
+        }
+        
+        .btn {
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+            color: white;
+            border: none;
+            padding: 16px 35px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(26, 108, 255, 0.2);
+        }
+        
+        .dark-mode .btn {
+            box-shadow: 0 5px 15px rgba(26, 108, 255, 0.3);
+        }
+        
+        .btn:hover {
+            background: linear-gradient(to right, #2a7bff, #5daaff);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(26, 108, 255, 0.3);
+        }
+        
+        .dark-mode .btn:hover {
+            box-shadow: 0 8px 20px rgba(26, 108, 255, 0.4);
+        }
+        
+        .btn i {
+            font-size: 1.2rem;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(to right, #28a745, #32cd56);
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(to right, #32cd56, #3cec66);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(to right, #ff9800, #ff5722);
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(to right, #ff5722, #ff6b3b);
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 30px;
+            max-height: 500px;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .table-container {
+            border-color: #333;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 16px 22px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dark-mode th, .dark-mode td {
+            border-bottom-color: #333;
+        }
+        
+        th {
+            background: linear-gradient(to right, #1a6cff, #2a7bff);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            font-size: 1.1rem;
+        }
+        
+        .dark-mode th {
+            background: linear-gradient(to right, #1a6cff, #2a7bff);
+        }
+        
+        tr {
+            background: white;
+            transition: background-color 0.3s ease;
+        }
+        
+        .dark-mode tr {
+            background: #1e1e1e;
+        }
+        
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .dark-mode tr:nth-child(even) {
+            background: #252525;
+        }
+        
+        tr:hover {
+            background: #f5f8ff;
+        }
+        
+        .dark-mode tr:hover {
+            background: #2a2a2a;
+        }
+        
+        .carrier-maersk {
+            background: rgba(255, 204, 0, 0.1) !important;
+            border-left: 4px solid rgba(255, 204, 0, 0.7);
+        }
+        
+        .dark-mode .carrier-maersk {
+            background: rgba(255, 204, 0, 0.15) !important;
+        }
+        
+        .carrier-cosco {
+            background: rgba(255, 69, 0, 0.1) !important;
+            border-left: 4px solid rgba(255, 69, 0, 0.7);
+        }
+        
+        .dark-mode .carrier-cosco {
+            background: rgba(255, 69, 0, 0.15) !important;
+        }
+        
+        .carrier-msc {
+            background: rgba(0, 191, 255, 0.1) !important;
+            border-left: 4px solid rgba(0, 191, 255, 0.7);
+        }
+        
+        .dark-mode .carrier-msc {
+            background: rgba(0, 191, 255, 0.15) !important;
+        }
+        
+        .carrier-cma {
+            background: rgba(50, 205, 50, 0.1) !important;
+            border-left: 4px solid rgba(50, 205, 50, 0.7);
+        }
+        
+        .dark-mode .carrier-cma {
+            background: rgba(50, 205, 50, 0.15) !important;
+        }
+        
+        .carrier-evergreen {
+            background: rgba(138, 43, 226, 0.1) !important;
+            border-left: 4px solid rgba(138, 43, 226, 0.7);
+        }
+        
+        .dark-mode .carrier-evergreen {
+            background: rgba(138, 43, 226, 0.15) !important;
+        }
+        
+        .carrier-hmm {
+            background: rgba(255, 105, 180, 0.1) !important;
+            border-left: 4px solid rgba(255, 105, 180, 0.7);
+        }
+        
+        .dark-mode .carrier-hmm {
+            background: rgba(255, 105, 180, 0.15) !important;
+        }
+        
+        .carrier-one {
+            background: rgba(70, 130, 180, 0.1) !important;
+            border-left: 4px solid rgba(70, 130, 180, 0.7);
+        }
+        
+        .dark-mode .carrier-one {
+            background: rgba(70, 130, 180, 0.15) !important;
+        }
+        
+        .carrier-hpl {
+            background: rgba(255, 165, 0, 0.1) !important;
+            border-left: 4px solid rgba(255, 165, 0, 0.7);
+        }
+        
+        .dark-mode .carrier-hpl {
+            background: rgba(255, 165, 0, 0.15) !important;
+        }
+        
+        .carrier-zim {
+            background: rgba(106, 90, 205, 0.1) !important;
+            border-left: 4px solid rgba(106, 90, 205, 0.7);
+        }
+        
+        .dark-mode .carrier-zim {
+            background: rgba(106, 90, 205, 0.15) !important;
+        }
+        
+        .carrier-yml {
+            background: rgba(0, 206, 209, 0.1) !important;
+            border-left: 4px solid rgba(0, 206, 209, 0.7);
+        }
+        
+        .dark-mode .carrier-yml {
+            background: rgba(0, 206, 209, 0.15) !important;
+        }
+        
+        .carrier-oocl {
+            background: rgba(255, 0, 0, 0.1) !important;
+            border-left: 4px solid rgba(255, 0, 0, 0.7);
+        }
+        
+        .dark-mode .carrier-oocl {
+            background: rgba(255, 0, 0, 0.15) !important;
+        }
+        
+        .carrier-default {
+            background: rgba(169, 169, 169, 0.1) !important;
+            border-left: 4px solid rgba(169, 169, 169, 0.7);
+        }
+        
+        .dark-mode .carrier-default {
+            background: rgba(169, 169, 169, 0.15) !important;
+        }
+        
+        .carrier-key {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f7ff;
+            border-radius: 10px;
+        }
+        
+        .dark-mode .carrier-key {
+            background: #1a1a2e;
+        }
+        
+        .carrier-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            background: white;
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .carrier-item {
+            background: #252525;
+            border-color: #333;
+        }
+        
+        .carrier-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        
+        .excel-section {
+            margin-top: 40px;
+        }
+        
+        .excel-actions {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+        
+        .file-upload {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .file-upload label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #1a6cff;
+            font-size: 1.1rem;
+        }
+        
+        .dark-mode .file-upload label {
+            color: #64b5f6;
+        }
+        
+        .file-upload input {
+            width: 100%;
+            padding: 14px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            background: white;
+            margin-top: 10px;
+            color: #333;
+        }
+        
+        .dark-mode .file-upload input {
+            background: #2d2d2d;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        
+        .validation-section {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            display: none;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        
+        .dark-mode .validation-section {
+            background: #332c00;
+            border-left-color: #ffc107;
+        }
+        
+        .validation-section.hide {
+            opacity: 0;
+        }
+        
+        .validation-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .validation-title i {
+            color: #ff9800;
+            font-size: 1.3rem;
+        }
+        
+        .validation-title h3 {
+            color: #ff9800;
+            font-size: 1.3rem;
+        }
+        
+        .dark-mode .validation-title h3 {
+            color: #ffb74d;
+        }
+        
+        .validation-list {
+            padding-left: 25px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .validation-item {
+            margin: 8px 0;
+            font-size: 1rem;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .validation-item.error {
+            background: rgba(244, 67, 54, 0.08);
+            color: #f44336;
+        }
+        
+        .dark-mode .validation-item.error {
+            background: rgba(244, 67, 54, 0.15);
+        }
+        
+        .validation-item.success {
+            background: rgba(76, 175, 80, 0.08);
+            color: #4CAF50;
+        }
+        
+        .dark-mode .validation-item.success {
+            background: rgba(76, 175, 80, 0.15);
+        }
+        
+        .validation-count {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .success-count {
+            background: rgba(46, 125, 50, 0.1);
+            color: #4CAF50;
+        }
+        
+        .dark-mode .success-count {
+            background: rgba(46, 125, 50, 0.15);
+        }
+        
+        .error-count {
+            background: rgba(198, 40, 40, 0.1);
+            color: #f44336;
+        }
+        
+        .dark-mode .error-count {
+            background: rgba(198, 40, 40, 0.15);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .success-indicator {
+            background: #4CAF50;
+        }
+        
+        .error-indicator {
+            background: #f44336;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: #777;
+        }
+        
+        .dark-mode .close-btn {
+            color: #aaa;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 20px 30px;
+            border-radius: 12px;
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transform: translateX(200%);
+            transition: transform 0.4s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .dark-mode .notification {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: #f44336;
+        }
+        
+        .notification i {
+            font-size: 1.8rem;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            max-width: 500px;
+            margin: 20px auto;
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .tabs {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px 0;
+            text-align: center;
+            cursor: pointer;
+            background: #f5f7ff;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .dark-mode .tab {
+            background: #1a1a2e;
+            color: #aaa;
+        }
+        
+        .tab.active {
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+            color: white;
+        }
+        
+        .dark-mode .tab.active {
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+        }
+        
+        .tab:hover:not(.active) {
+            background: #e6f0ff;
+        }
+        
+        .dark-mode .tab:hover:not(.active) {
+            background: #252540;
+        }
+        
+        @media (max-width: 768px) {
+            .search-section {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .excel-actions {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .table-container {
+                max-height: 400px;
+            }
+            
+            th, td {
+                padding: 12px 15px;
+                font-size: 14px;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dark-mode .card-title {
+            border-bottom-color: #333;
+        }
+        
+        .card-title i {
+            font-size: 1.8rem;
+            color: #1a6cff;
+        }
+        
+        .dark-mode .card-title i {
+            color: #64b5f6;
+        }
+        
+        .card-title h2 {
+            font-size: 1.8rem;
+            color: #333;
+        }
+        
+        .dark-mode .card-title h2 {
+            color: #e0e0e0;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .results-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .results-count {
+            background: #e6f0ff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #1a6cff;
+        }
+        
+        .dark-mode .results-count {
+            background: rgba(26, 108, 255, 0.2);
+            color: #90caf9;
+        }
+        
+        .close-results {
+            background: #ffebee;
+            color: #f44336;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .dark-mode .close-results {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ff8a80;
+        }
+        
+        .close-results:hover {
+            background: #ffcdd2;
+        }
+        
+        .dark-mode .close-results:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+        
+        /* 密码模态框样式 */
+        .password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .password-modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .password-content {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.4s ease;
+        }
+        
+        .dark-mode .password-content {
+            background: #1e1e1e;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+        
+        .password-modal.show .password-content {
+            transform: translateY(0);
+        }
+        
+        .password-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .password-title i {
+            color: #ff9800;
+            font-size: 2rem;
+        }
+        
+        .password-title h2 {
+            font-size: 1.8rem;
+            color: #333;
+        }
+        
+        .dark-mode .password-title h2 {
+            color: #e0e0e0;
+        }
+        
+        .password-input-group {
+            margin-bottom: 25px;
+        }
+        
+        .password-input-group label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1rem;
+        }
+        
+        .dark-mode .password-input-group label {
+            color: #aaa;
+        }
+        
+        .password-input {
+            position: relative;
+        }
+        
+        .password-input input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            letter-spacing: 3px;
+            background: white;
+            color: #333;
+        }
+        
+        .dark-mode .password-input input {
+            background: #2d2d2d;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        
+        .password-input input:focus {
+            outline: none;
+            border-color: #1a6cff;
+            box-shadow: 0 0 0 3px rgba(26, 108, 255, 0.2);
+        }
+        
+        .dark-mode .password-input input:focus {
+            border-color: #64b5f6;
+            box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.3);
+        }
+        
+        .password-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+        
+        .password-btn {
+            padding: 14px 30px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .password-submit {
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+            color: white;
+        }
+        
+        .password-submit:hover {
+            background: linear-gradient(to right, #2a7bff, #5daaff);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(26, 108, 255, 0.2);
+        }
+        
+        .password-cancel {
+            background: #f5f5f5;
+            color: #555;
+        }
+        
+        .dark-mode .password-cancel {
+            background: #333;
+            color: #e0e0e0;
+        }
+        
+        .password-cancel:hover {
+            background: #e0e0e0;
+        }
+        
+        .dark-mode .password-cancel:hover {
+            background: #444;
+        }
+        
+        .password-error {
+            color: #f44336;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            height: 20px;
+            text-align: center;
+        }
+        
+        .password-hint {
+            text-align: center;
+            margin-top: 20px;
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        .dark-mode .password-hint {
+            color: #aaa;
+        }
+        
+        .password-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            cursor: pointer;
+        }
+        
+        .dark-mode .password-icon {
+            color: #aaa;
+        }
+        
+        .attempts-count {
+            text-align: center;
+            margin-top: 15px;
+            color: #f44336;
+            font-weight: 600;
+        }
+        
+        /* 安全警告样式 */
+        .security-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 3000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .dark-mode .security-warning {
+            background: #121212;
+            color: #e0e0e0;
+        }
+        
+        .security-warning i {
+            font-size: 4rem;
+            color: #f44336;
+            margin-bottom: 20px;
+        }
+        
+        .security-warning h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #f44336;
+        }
+        
+        .security-warning p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        /* 优化数据管理区域 */
+        .data-management-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .data-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .data-card {
+            background: #1e1e1e;
+            border-color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .data-card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dark-mode .data-card-header {
+            border-bottom-color: #333;
+        }
+        
+        .data-card-header i {
+            font-size: 1.8rem;
+            color: #1a6cff;
+        }
+        
+        .dark-mode .data-card-header i {
+            color: #64b5f6;
+        }
+        
+        .data-card-header h3 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .dark-mode .data-card-header h3 {
+            color: #e0e0e0;
+        }
+        
+        .data-card-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .data-action {
+            flex: 1;
+            min-width: 280px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .data-action {
+            background: #252525;
+            border-color: #333;
+        }
+        
+        .data-action:hover {
+            background: #f5f7ff;
+            transform: translateY(-5px);
+        }
+        
+        .dark-mode .data-action:hover {
+            background: #2a2a40;
+        }
+        
+        .action-icon {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .action-icon i {
+            font-size: 2.5rem;
+            color: #1a6cff;
+            background: #e6f0ff;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .dark-mode .action-icon i {
+            color: #64b5f6;
+            background: rgba(26, 108, 255, 0.2);
+        }
+        
+        .action-title {
+            text-align: center;
+            font-size: 1.3rem;
+            color: #1a6cff;
+            margin-bottom: 15px;
+        }
+        
+        .dark-mode .action-title {
+            color: #64b5f6;
+        }
+        
+        .action-description {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .dark-mode .action-description {
+            color: #aaa;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .dark-mode .upload-area {
+            background: #252525;
+            border-color: #444;
+        }
+        
+        .upload-area:hover {
+            background: #f5f7ff;
+            border-color: #1a6cff;
+        }
+        
+        .dark-mode .upload-area:hover {
+            background: #2a2a40;
+            border-color: #64b5f6;
+        }
+        
+        .upload-area i {
+            font-size: 3rem;
+            color: #1a6cff;
+            margin-bottom: 15px;
+        }
+        
+        .dark-mode .upload-area i {
+            color: #64b5f6;
+        }
+        
+        .upload-area h4 {
+            font-size: 1.2rem;
+            color: #1a6cff;
+            margin-bottom: 10px;
+        }
+        
+        .dark-mode .upload-area h4 {
+            color: #64b5f6;
+        }
+        
+        .upload-area p {
+            font-size: 0.9rem;
+            color: #777;
+            margin-bottom: 15px;
+        }
+        
+        .dark-mode .upload-area p {
+            color: #aaa;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(to right, #1a6cff, #4da0ff);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .upload-btn:hover {
+            background: linear-gradient(to right, #2a7bff, #5daaff);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(26, 108, 255, 0.2);
+        }
+        
+        .validation-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .validation-header i {
+            font-size: 1.8rem;
+            color: #ff9800;
+        }
+        
+        .validation-header h3 {
+            font-size: 1.4rem;
+            color: #ff9800;
+        }
+        
+        .dark-mode .validation-header h3 {
+            color: #ffb74d;
+        }
+        
+        .validation-summary {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .summary-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            background: white;
+            border: 1px solid #eee;
+        }
+        
+        .dark-mode .summary-item {
+            background: #252525;
+            border-color: #333;
+        }
+        
+        .summary-success {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .summary-error {
+            border-left: 4px solid #f44336;
+        }
+        
+        .summary-count {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .success-count-display {
+            color: #4CAF50;
+        }
+        
+        .error-count-display {
+            color: #f44336;
+        }
+        
+        .summary-label {
+            font-size: 1rem;
+            color: #777;
+        }
+        
+        .dark-mode .summary-label {
+            color: #aaa;
+        }
+        
+        /* 价格对比图表区域 */
+        .chart-section {
+            margin-top: 40px;
+            display: none;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f5f7ff;
+            border: 1px solid #eaeaea;
+        }
+        
+        .dark-mode .chart-section {
+            background: #1a1a2e;
+            border-color: #333;
+        }
+        
+        .chart-section.show {
+            display: block;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+            color: #1a6cff;
+            font-weight: 600;
+        }
+        
+        .dark-mode .chart-title {
+            color: #64b5f6;
+        }
+        
+        .chart-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #777;
+        }
+        
+        .dark-mode .chart-close {
+            color: #aaa;
+        }
+        
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+        
+        /* 模式切换按钮 */
+        .mode-toggle {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: #f0f0f0;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .dark-mode .mode-toggle {
+            background: #333;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .mode-toggle i {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        
+        .dark-mode .mode-toggle i {
+            color: #f0f0f0;
+        }
+        
+        /* 对比按钮 */
+        .compare-btn {
+            background: linear-gradient(to right, #9c27b0, #673ab7);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .compare-btn:hover {
+            background: linear-gradient(to right, #ab47bc, #7e57c2);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(156, 39, 176, 0.3);
+        }
+        
+        /* 价格分析卡片 */
+        .analysis-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .analysis-card {
+            flex: 1;
+            min-width: 250px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eaeaea;
+        }
+        
+        .dark-mode .analysis-card {
+            background: #1e1e1e;
+            border-color: #333;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .analysis-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #1a6cff;
+        }
+        
+        .dark-mode .analysis-card-header {
+            color: #64b5f6;
+        }
+        
+        .analysis-card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .analysis-card-label {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        .dark-mode .analysis-card-label {
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <!-- 安全警告 -->
+    <div class="security-warning" id="security-warning">
+        <i class="fas fa-radiation"></i>
+        <h2>安全警告：禁止访问开发者工具</h2>
+        <p>检测到您试图打开开发者工具，此操作已被系统阻止。请关闭开发者工具并刷新页面以继续使用系统。</p>
+        <p>系统将在 <span id="countdown">5</span> 秒后自动关闭</p>
+    </div>
+    
+    <!-- 密码模态框 -->
+    <div class="password-modal" id="password-modal">
+        <div class="password-content">
+            <div class="password-title">
+                <i class="fas fa-lock"></i>
+                <h2>数据管理权限验证</h2>
+            </div>
+            <div class="password-input-group">
+                <label for="password">请输入访问密码：</label>
+                <div class="password-input">
+                    <input type="password" id="password" placeholder="输入密码..." autocomplete="off">
+                    <i class="fas fa-eye-slash password-icon" id="toggle-password"></i>
+                </div>
+                <div class="password-error" id="password-error"></div>
+            </div>
+            <div class="password-actions">
+                <button class="password-btn password-cancel" id="cancel-password">取消</button>
+                <button class="password-btn password-submit" id="submit-password">验证</button>
+            </div>
+            <div class="password-hint">
+                <i class="fas fa-info-circle"></i> 只有授权用户才能访问数据管理功能
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-ship"></i> 价格查询</h1>
+            <p class="subtitle">国际海运运价查询与管理平台</p>
+            
+            <!-- 模式切换按钮 -->
+            <button class="mode-toggle" id="mode-toggle">
+                <i class="fas fa-moon"></i>
+            </button>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="search">运价查询</div>
+            <div class="tab" data-tab="data">数据管理</div>
+        </div>
+        
+        <div class="card" id="search-card">
+            <div class="card-title">
+                <i class="fas fa-search"></i>
+                <h2>海运价格查询</h2>
+            </div>
+            <p>选择起运港和目的港查询最新海运价格</p>
+            
+            <div class="search-section">
+                <div class="search-group">
+                    <label for="origin">起运港（中国）:</label>
+                    <div class="search-container">
+                        <input type="text" id="origin" placeholder="输入或选择起运港...">
+                        <div class="dropdown" id="origin-dropdown"></div>
+                    </div>
+                </div>
+                
+                <div class="search-group">
+                    <label for="destination">目的港（拉丁美洲）:</label>
+                    <div class="search-container">
+                        <input type="text" id="destination" placeholder="输入或选择目的港...">
+                        <div class="dropdown" id="destination-dropdown"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn" id="search-btn">
+                <i class="fas fa-search"></i> 查询价格
+            </button>
+        </div>
+        
+        <div class="card hidden" id="results-card">
+            <div class="results-header">
+                <div class="card-title">
+                    <i class="fas fa-table"></i>
+                    <h2>海运价格表</h2>
+                </div>
+                <div class="results-info">
+                    <div class="results-count" id="results-count">找到 0 条记录</div>
+                    <button class="close-results" id="close-results">
+                        <i class="fas fa-times"></i> 关闭结果
+                    </button>
+                    <button class="compare-btn" id="compare-btn">
+                        <i class="fas fa-chart-bar"></i> 价格对比分析
+                    </button>
+                </div>
+            </div>
+            <p>以下为查询结果</p>            
+            <div class="table-container">
+                <table id="price-table">
+                    <thead>
+                        <tr>
+                            <th>船公司</th>
+                            <th>起运港</th>
+                            <th>目的港</th>
+                            <th>20GP</th>
+                            <th>40GP</th>
+                            <th>40HC</th>
+                            <th>40NOR</th>
+                            <th>有效期</th>
+                            <th>国家</th>
+                            <th>航线</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body">
+                        <!-- 价格数据将通过JavaScript动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 价格分析卡片 -->
+            <div class="analysis-cards" id="analysis-cards">
+                <!-- 分析卡片将通过JavaScript动态填充 -->
+            </div>
+            
+            <!-- 价格对比图表 -->
+            <div class="chart-section" id="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>船公司价格对比分析</span>
+                    </div>
+                    <button class="chart-close" id="chart-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card hidden" id="data-card">
+            <div class="card-title">
+                <i class="fas fa-file-excel"></i>
+                <h2>价格数据管理</h2>
+            </div>
+            <p>下载Excel模板或上传更新价格数据</p>
+            
+            <div class="data-management-container">
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <i class="fas fa-file-download"></i>
+                        <h3>下载Excel模板</h3>
+                    </div>
+                    <div class="data-card-content">
+                        <div class="data-action">
+                            <div class="action-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div class="action-title">下载模板文件</div>
+                            <div class="action-description">
+                                下载包含所有需要列标题的Excel模板文件，按照模板格式准备您的价格数据。
+                            </div>
+                            <div style="text-align: center;">
+                                <button class="btn btn-secondary" id="download-template">
+                                    <i class="fas fa-download"></i> 下载Excel模板
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="data-action">
+                            <div class="action-icon">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="action-title">模板说明</div>
+                            <div class="action-description">
+                                <p>模板包含以下列：起运港、目的港、船司、20GP、40GP、40HC、40NOR、有效期范围、国家、航线、备注</p>
+                                <p style="margin-top: 10px;">请确保使用标准格式填写数据</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <i class="fas fa-file-upload"></i>
+                        <h3>上传价格数据</h3>
+                    </div>
+                    <div class="data-card-content">
+                        <div class="data-action" style="flex: 2;">
+                            <div class="upload-area">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h4>上传价格更新Excel文件</h4>
+                                <p>支持.xlsx和.xls格式文件，最大文件大小10MB</p>
+                                <div class="file-input-wrapper">
+                                    <button class="upload-btn">
+                                        <i class="fas fa-file-excel"></i> 选择Excel文件
+                                    </button>
+                                    <input type="file" id="excel-upload" accept=".xlsx, .xls">
+                                </div>
+                                <p id="file-name" style="margin-top: 15px; font-size: 0.9rem; color: #777;"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="data-action">
+                            <div class="action-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="action-title">上传要求</div>
+                            <div class="action-description">
+                                <p>• 使用下载的模板格式</p>
+                                <p>• 确保目的港格式正确</p>
+                                <p>• 检查所有价格字段为数字</p>
+                                <p>• 确认有效期格式正确</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="validation-section" id="validation-section">
+                <button class="close-btn" id="close-validation">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="validation-header">
+                    <i class="fas fa-clipboard-check"></i>
+                    <h3>目的港格式验证结果</h3>
+                </div>
+                <div class="validation-list" id="validation-list"></div>
+                
+                <div class="validation-summary">
+                    <div class="summary-item summary-success">
+                        <div class="summary-label">验证通过</div>
+                        <div class="summary-count success-count-display" id="success-count">0</div>
+                        <div class="summary-label">条记录</div>
+                    </div>
+                    
+                    <div class="summary-item summary-error">
+                        <div class="summary-label">验证失败</div>
+                        <div class="summary-count error-count-display" id="error-count">0</div>
+                        <div class="summary-label">条记录</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <span>操作成功！价格数据已更新。</span>
+    </div>
+    
+    <script>
+        // 示例港口数据（添加了省份信息）
+        const originPorts = [
+            {cn: "上海", en: "SHANGHAI", code: "CNSHA", province: "上海", region: "中国"},
+            {cn: "宁波", en: "NINGBO", code: "CNNGB", province: "浙江", region: "中国"},
+            {cn: "深圳", en: "SHENZHEN", code: "CNSZX", province: "广东", region: "中国"},
+            {cn: "青岛", en: "QINGDAO", code: "CNQDG", province: "山东", region: "中国"},
+            {cn: "天津", en: "TIANJIN", code: "CNTSN", province: "天津", region: "中国"},
+            {cn: "广州", en: "GUANGZHOU", code: "CNGZG", province: "广东", region: "中国"},
+            {cn: "厦门", en: "XIAMEN", code: "CNXMN", province: "福建", region: "中国"},
+            {cn: "大连", en: "DALIAN", code: "CNDLC", province: "辽宁", region: "中国"},
+            {cn: "南京", en: "NANJING", code: "CNNKG", province: "江苏", region: "中国"},
+            {cn: "武汉", en: "WUHAN", code: "CNWUH", province: "湖北", region: "中国"},
+            {cn: "合肥港", en: "PORT OF HEFEI", code: "CNHFI", province: "安徽", region: "中国"},
+            {cn: "赤湾", en: "CHIWAN", code: "CNCWN", province: "广东", region: "中国"},
+            {cn: "防城", en: "FANGCHENG", code: "CNFAN", province: "广西", region: "中国"},
+            {cn: "斗门", en: "DOUMEN", code: "CNDOU", province: "广东", region: "中国"},
+            {cn: "马尾福州", en: "MAWEI FUZHOU", code: "CNMWF", province: "福建", region: "中国"},
+            {cn: "佛山", en: "FOSHAN", code: "CNFOS", province: "广东", region: "中国"},
+            {cn: "江阴福清福州", en: "JIANGYIN FUQING FUZHOU", code: "CNJFF", province: "福建", region: "中国"},
+            {cn: "高明", en: "GAOMING", code: "CNGAM", province: "广东", region: "中国"},
+            {cn: "高栏", en: "GAOLAN", code: "CNGLN", province: "广东", region: "中国"},
+            {cn: "海口", en: "HAIKOU", code: "CNHAK", province: "海南", region: "中国"},
+            {cn: "黄埔", en: "HUANGPU", code: "CNHUA", province: "广东", region: "中国"},
+            {cn: "江门", en: "JIANGMEN", code: "CNJMN", province: "广东", region: "中国"},
+            {cn: "江门市", en: "JIANGMEN SHI", code: "CNJMS", province: "广东", region: "中国"},
+            {cn: "勒流", en: "LELIU", code: "CNLLU", province: "广东", region: "中国"},
+            {cn: "澜石", en: "LANSHI", code: "CNLSH", province: "广东", region: "中国"},
+            {cn: "南沙", en: "NANSHA", code: "CNNSA", province: "广东", region: "中国"},
+            {cn: "容奇", en: "RONGQI", code: "CNRQI", province: "广东", region: "中国"},
+            {cn: "三山", en: "SANSHAN", code: "CNSSN", province: "广东", region: "中国"},
+            {cn: "顺德", en: "SHUNDE", code: "CNSDE", province: "广东", region: "中国"},
+            {cn: "汕头", en: "SHANTOU", code: "CNSTG", province: "广东", region: "中国"},
+            {cn: "梧州", en: "WUZHOU", code: "CNWUZ", province: "广西", region: "中国"},
+            {cn: "钦州", en: "QINZHOU", code: "CNQZH", province: "广西", region: "中国"},
+            {cn: "小榄", en: "XIAOLAN", code: "CNXLA", province: "广东", region: "中国"},
+            {cn: "北蛟", en: "BEIJIAO", code: "CNBJO", province: "广东", region: "中国"},
+            {cn: "盐田", en: "YANTIAN", code: "CNYTN", province: "广东", region: "中国"},
+            {cn: "湛江", en: "ZHANJIANG", code: "CNZHA", province: "广东", region: "中国"},
+            {cn: "肇庆", en: "ZHAOQING", code: "CNZQG", province: "广东", region: "中国"},
+            {cn: "中山", en: "ZHONGSHAN", code: "CNZSN", province: "广东", region: "中国"},
+            {cn: "珠海", en: "ZHUHAI", code: "CNZUH", province: "广东", region: "中国"},
+            {cn: "香港", en: "HONG KONG", code: "CNHKG", province: "香港", region: "中国"},
+            {cn: "重庆", en: "CHONGQING", code: "CNCKG", province: "重庆", region: "中国"},
+            {cn: "长沙", en: "CHANGSHA", code: "CNCSX", province: "湖南", region: "中国"},
+            {cn: "常州", en: "CHANGZHOU", code: "CNCZX", province: "江苏", region: "中国"},
+            {cn: "大丰", en: "DAFENG", code: "CNDFG", province: "江苏", region: "中国"},
+            {cn: "江阴", en: "JIANGYIN", code: "CNJGY", province: "江苏", region: "中国"},
+            {cn: "荆州", en: "JINGZHOU", code: "CNJZH", province: "湖北", region: "中国"},
+            {cn: "九江", en: "JIUJIANG", code: "CNJJG", province: "江西", region: "中国"},
+            {cn: "南昌", en: "NANCHANG", code: "CNKHN", province: "江西", region: "中国"},
+            {cn: "乍浦", en: "ZHAPU", code: "CNZPU", province: "浙江", region: "中国"},
+            {cn: "南通", en: "NANTONG", code: "CNNTG", province: "江苏", region: "中国"},
+            {cn: "沙市", en: "SHASHI", code: "CNSSX", province: "湖北", region: "中国"},
+            {cn: "太仓", en: "TAICANG", code: "CNTAG", province: "江苏", region: "中国"},
+            {cn: "芜湖", en: "WUHU", code: "CNWHI", province: "安徽", region: "中国"},
+            {cn: "温州", en: "WENZHOU", code: "CNWNZ", province: "浙江", region: "中国"},
+            {cn: "安庆", en: "ANQING", code: "CNAQG", province: "安徽", region: "中国"},
+            {cn: "成都", en: "CHENGDU", code: "CNCTU", province: "四川", region: "中国"},
+            {cn: "扬州", en: "YANGZHOU", code: "CNYZA", province: "江苏", region: "中国"},
+            {cn: "宜昌", en: "YICHANG", code: "CNYIC", province: "湖北", region: "中国"},
+            {cn: "岳阳", en: "YUEYANG", code: "CNYYA", province: "湖南", region: "中国"},
+            {cn: "张家港", en: "ZHANGJIAGANG", code: "CNZJG", province: "江苏", region: "中国"},
+            {cn: "镇江", en: "ZHENJIANG", code: "CNZHE", province: "江苏", region: "中国"},
+            {cn: "连云港", en: "LIANYUNGANG", code: "CNLYG", province: "江苏", region: "中国"},
+            {cn: "天津新港", en: "TIANJIN XINGANG", code: "CNTXG", province: "天津", region: "中国"},
+            {cn: "威海", en: "WEIHAI", code: "CNWEI", province: "山东", region: "中国"},
+            {cn: "烟台", en: "YANTAI", code: "CNYNT", province: "山东", region: "中国"}
+        ];
+        
+        // 完整的拉丁美洲目的港数据
+        const destinationPorts = [
+            // 墨西哥
+            {cn: "曼萨尼约", en: "MANZANILLO", code: "MXZLO", region: "墨西哥", area: "墨西哥"},
+            {cn: "拉萨罗卡德纳斯", en: "LAZARO CARDENAS", code: "MXLZC", region: "墨西哥", area: "墨西哥"},
+            {cn: "恩森纳达", en: "ENSENADA", code: "MXESE", region: "墨西哥", area: "墨西哥"},
+            {cn: "瓜伊马斯", en: "GUAYMAS", code: "MXGYM", region: "墨西哥", area: "墨西哥"},
+            {cn: "马萨特兰", en: "MAZATLAN", code: "MXMZT", region: "墨西哥", area: "墨西哥"},
+            {cn: "韦拉克鲁斯", en: "VERACRUZ", code: "MXVER", region: "墨西哥", area: "墨西哥"},
+            {cn: "普罗格雷索", en: "PROGRESO", code: "MXPRO", region: "墨西哥", area: "墨西哥"},
+            {cn: "阿尔塔米拉", en: "ALTAMIRA", code: "MXATM", region: "墨西哥", area: "墨西哥"},
+            
+            // 危地马拉
+            {cn: "巴里奥斯港", en: "PUERTO BARRIOS", code: "GTPBR", region: "危地马拉", area: "中美洲"},
+            {cn: "夸特扎尔", en: "PUERTO QUETZAL", code: "GTQUZ", region: "危地马拉", area: "中美洲"},
+            
+            // 萨尔瓦多
+            {cn: "阿卡胡特拉", en: "ACAJUTLA", code: "SVAQJ", region: "萨尔瓦多", area: "中美洲"},
+            
+            // 尼加拉瓜
+            {cn: "科林托", en: "CORINTO", code: "NICIO", region: "尼加拉瓜", area: "中美洲"},
+            
+            // 哥斯达黎加
+            {cn: "卡尔德拉", en: "PUERTO CALDERA", code: "CRPCL", region: "哥斯达黎加", area: "中美洲"},
+            {cn: "莫因", en: "PUERTO MOIN", code: "CRPMO", region: "哥斯达黎加", area: "中美洲"},
+            
+            // 洪都拉斯
+            {cn: "科尔特斯港", en: "PUERTO CORTES", code: "HNPCR", region: "洪都拉斯", area: "中美洲"},
+            {cn: "圣彼得苏拉", en: "SAN PEDRO SULA", code: "HNSAP", region: "洪都拉斯", area: "中美洲"},
+            
+            // 巴拿马
+            {cn: "科隆自由贸易区", en: "COLON FREE ZONE", code: "PACFZ", region: "巴拿马", area: "中美洲"},
+            {cn: "克里斯托瓦尔", en: "CRISTOBAL", code: "PACTB", region: "巴拿马", area: "中美洲"},
+            {cn: "科隆集装箱码头", en: "COLON CONTAINER TERMINAL", code: "PACCT", region: "巴拿马", area: "中美洲"},
+            {cn: "曼萨尼约", en: "MANZANILLO.PA", code: "PAMIT", region: "巴拿马", area: "中美洲"},
+            {cn: "罗曼德", en: "RODMAN", code: "PAROD", region: "巴拿马", area: "中美洲"},
+            {cn: "巴拿马城", en: "PANAMA CITY", code: "PAPTY", region: "巴拿马", area: "中美洲"},
+            {cn: "巴尔博亚", en: "BALBOA", code: "PABLB", region: "巴拿马", area: "中美洲"},
+            
+            // 哥伦比亚
+            {cn: "卡塔赫纳", en: "CARTAGENA", code: "COCTG", region: "哥伦比亚", area: "南美西"},
+            {cn: "巴兰基利亚", en: "BARRANQUILLA", code: "COBAQ", region: "哥伦比亚", area: "南美西"},
+            {cn: "圣玛尔塔", en: "SANTA MARTA", code: "COSMR", region: "哥伦比亚", area: "南美西"},
+            {cn: "布埃纳文图拉", en: "BUENAVENTURA", code: "COBUN", region: "哥伦比亚", area: "南美西"},
+            
+            // 委内瑞拉
+            {cn: "卡贝略港", en: "PUERTO CABELLO", code: "VEPBL", region: "委内瑞拉", area: "南美西"},
+            {cn: "拉瓜伊拉", en: "LA GUAIRA", code: "VELAG", region: "委内瑞拉", area: "南美西"},
+            
+            // 厄瓜多尔
+            {cn: "瓜亚基尔", en: "GUAYAQUIL", code: "ECGYE", region: "厄瓜多尔", area: "南美西"},
+            {cn: "波索哈尔", en: "POSORJA", code: "ECPSJ", region: "厄瓜多尔", area: "南美西"},
+            
+            // 秘鲁
+            {cn: "卡亚俄", en: "CALLAO", code: "PECLL", region: "秘鲁", area: "南美西"},
+            {cn: "派塔", en: "PAITA", code: "PEPAI", region: "秘鲁", area: "南美西"},
+            {cn: "利马", en: "LIMA", code: "PELIM", region: "秘鲁", area: "南美西"},
+            {cn: "钱凯", en: "CHANCAY", code: "PECHY", region: "秘鲁", area: "南美西"},
+            {cn: "马塔腊尼", en: "MATARANI", code: "PEMRI", region: "秘鲁", area: "南美西"},
+            
+            // 智利
+            {cn: "利尔奎", en: "LIRQUEN", code: "CLLQN", region: "智利", area: "南美西"},
+            {cn: "圣安东尼奥", en: "SAN ANTONIO", code: "CLSAI", region: "智利", area: "南美西"},
+            {cn: "阿里卡", en: "ARICA", code: "CLARI", region: "智利", area: "南美西"},
+            {cn: "伊基克", en: "IQUIQUE", code: "CLIQQ", region: "智利", area: "南美西"},
+            {cn: "科罗内尔", en: "CORONEL", code: "CLCNL", region: "智利", area: "南美西"},
+            {cn: "圣文森特", en: "SAN VICENTE", code: "CLSVE", region: "智利", area: "南美西"},
+            {cn: "安加莫斯港", en: "PUERTO ANGAMOS", code: "CLPAG", region: "智利", area: "南美西"},
+            {cn: "安托法加斯塔", en: "ANTOFAGASTA", code: "CLANF", region: "智利", area: "南美西"},
+            {cn: "瓦尔帕莱索", en: "VALPARAISO", code: "CLVAP", region: "智利", area: "南美西"},
+            
+            // 巴西
+            {cn: "里约热内卢", en: "RIO DE JANEIRO", code: "BRRIO", region: "巴西", area: "南美东"},
+            {cn: "伊塔雅伊", en: "ITAJAI", code: "BRITA", region: "巴西", area: "南美东"},
+            {cn: "桑托斯", en: "SANTOS", code: "BRSSZ", region: "巴西", area: "南美东"},
+            {cn: "巴拉那瓜", en: "PARANAGUA", code: "BRPNG", region: "巴西", area: "南美东"},
+            {cn: "纳维根特斯", en: "NAVEGANTES", code: "BRNVT", region: "巴西", area: "南美东"},
+            {cn: "里奥格兰德", en: "RIO GRANDE", code: "BRRIG", region: "巴西", area: "南美东"},
+            {cn: "伊塔普亚港", en: "ITAPOA", code: "BRITP", region: "巴西", area: "南美东"},
+            {cn: "伊塔瓜伊", en: "ITAGUAI", code: "BRITG", region: "巴西", area: "南美东"},
+            {cn: "萨尔瓦多", en: "SALVADOR", code: "BRSSA", region: "巴西", area: "南美东"},
+            {cn: "福塔莱萨", en: "FORTALEZA", code: "BRFOR", region: "巴西", area: "南美东"},
+            {cn: "培森", en: "PECEM", code: "BRPEC", region: "巴西", area: "南美东"},
+            {cn: "苏阿普", en: "SUAPE", code: "BRSUA", region: "巴西", area: "南美东"},
+            {cn: "马瑙斯", en: "MANAUS", code: "BRMAO", region: "巴西", area: "南美东"},
+            {cn: "维多利亚", en: "VITORIA", code: "BRVIX", region: "巴西", area: "南美东"},
+            
+            // 乌拉圭
+            {cn: "蒙得维的亚", en: "MONTEVIDEO", code: "UYMVD", region: "乌拉圭", area: "南美东"},
+            
+            // 阿根廷
+            {cn: "布宜诺斯艾利斯", en: "BUENOS AIRES", code: "ARBUE", region: "阿根廷", area: "南美东"},
+            {cn: "罗萨里奥", en: "ROSARIO", code: "ARROS", region: "阿根廷", area: "南美东"},
+            {cn: "萨拉特", en: "ZARATE", code: "ARZAE", region: "阿根廷", area: "南美东"},
+            {cn: "拉普拉塔", en: "LA PLATA", code: "ARLPG", region: "阿根廷", area: "南美东"},
+            
+            // 巴拉圭
+            {cn: "亚松森", en: "ASUNCION", code: "PYASU", region: "巴拉圭", area: "南美东"},
+            {cn: "卡库佩米", en: "CAACUPEMI PILAR", code: "PYCAU", region: "巴拉圭", area: "南美东"},
+            {cn: "普埃尔托塞古罗", en: "PUERTO SEGURO FLUVIAL", code: "PYPSE", region: "巴拉圭", area: "南美东"},
+            
+            // 多米尼加共和国
+            {cn: "考塞多", en: "CAUCEDO", code: "DOCAU", region: "多米尼加", area: "加勒比"},
+            {cn: "海纳", en: "RIO HAINA", code: "DOHAI", region: "多米尼达", area: "加勒比"},
+            
+            // 牙买加
+            {cn: "金斯敦", en: "KINGSTON", code: "JMKIN", region: "牙买加", area: "加勒比"},
+            {cn: "蒙特歌湾", en: "MONTEGO BAY", code: "JMMBJ", region: "牙买加", area: "加勒比"},
+            
+            // 海地
+            {cn: "太子港", en: "PORT AU PRINCE", code: "HTPAP", region: "海地", area: "加勒比"},
+            {cn: "海地角港", en: "CAP HAITIEN", code: "HTCAP", region: "海地", area: "加勒比"},
+            
+            // 特立尼达和多巴哥
+            {cn: "西班牙港", en: "PORT OF SPAIN", code: "TTPOS", region: "特立尼达和多巴哥", area: "加勒比"},
+            {cn: "利萨斯角", en: "POINT LISAS", code: "TTPOL", region: "特立尼达和多巴哥", area: "加勒比"},
+            
+            // 巴巴多斯
+            {cn: "布里奇敦", en: "BRIDGETOWN", code: "BBBGI", region: "巴巴多斯", area: "加勒比"},
+            
+            // 圣卢西亚
+            {cn: "卡斯特里", en: "CASTRIES", code: "LCSLU", region: "圣卢西亚", area: "加勒比"},
+            
+            // 圣文森特和格林纳丁斯
+            {cn: "金斯敦", en: "ST.VINCENT AND THE GRENADINES", code: "VCSVD", region: "圣文森特", area: "加勒比"},
+            
+            // 阿鲁巴
+            {cn: "巴尔卡德拉", en: "BARCADERA", code: "AWBCD", region: "阿鲁巴", area: "加勒比"},
+            
+            // 多米尼克
+            {cn: "罗索", en: "ROSEAU", code: "DMRSU", region: "多米尼克", area: "加勒比"},
+            
+            // 圣基茨和尼维斯
+            {cn: "巴斯特尔", en: "BASSETERRE", code: "KNBAS", region: "圣基茨和尼维斯", area: "加勒比"},
+            
+            // 荷属圣马丁
+            {cn: "菲利普斯堡", en: "PHILIPSBURG", code: "SXPHI", region: "荷属圣马丁", area: "加勒比"},
+            
+            // 巴哈马
+            {cn: "巴哈马自由港", en: "FREEPORT, BAHAMAS", code: "BSFPO", region: "巴哈马", area: "加勒比"},
+            {cn: "拿骚", en: "NASSAU", code: "BSNAS", region: "巴哈马", area: "加勒比"},
+            
+            // 美属维尔京群岛
+            {cn: "夏洛特阿马利亚", en: "CHARLOTTE AMALIE", code: "VICHA", region: "美属维尔京群岛", area: "加勒比"},
+            
+            // 波多黎各
+            {cn: "圣胡安", en: "SAN JUAN", code: "PRSJU", region: "波多黎各", area: "加勒比"},
+            
+            // 圭亚那
+            {cn: "乔治敦", en: "GEORGETOWN", code: "GYGEO", region: "圭亚那", area: "加勒比"},
+            
+            // 苏里南
+            {cn: "帕拉马里博", en: "PARAMARIBO", code: "SRPBM", region: "苏里南", area: "加勒比"},
+
+            // 巴林
+            {cn: "巴林", en: "Bahrain", code: "BHBAH", region: "巴林", area: "中东"},
+            
+            // 伊拉克
+            {cn: "乌姆盖斯尔", en: "Umm Qasr", code: "IQUMQ", region: "伊拉克", area: "中东"},
+
+            // 科威特
+            {cn: "舒艾拜", en: "Shuwaiba", code: "KWSAA", region: "科威特", area: "中东"}, 
+            {cn: "舒威赫", en: "Shuwaikh", code: "KWSWK", region: "科威特", area: "中东"}, 
+
+            // 阿曼
+            {cn: "索哈港", en: "Sohar", code: "OMSOH", region: "阿曼", area: "中东"}, 
+
+            // 卡塔尔
+            {cn: "哈马德", en: "Hamad", code: "QANMD", region: "卡塔尔", area: "中东"},  
+
+            // 沙特阿拉伯
+            {cn: "达曼", en: "Ad Dammam", code: "SADAM", region: "沙特阿拉伯", area: "中东"},
+            {cn: "朱拜勒", en: "Jubail", code: "SAJUB", region: "沙特阿拉伯", area: "中东"},  
+
+            // 阿联酋
+            {cn: "阿布扎比", en: "Abu Dhabi", code: "AEABD", region: "阿联酋", area: "中东"}, 
+            {cn: "阿治曼", en: "Ajman", code: "AEAJM", region: "阿联酋", area: "中东"}, 
+            {cn: "杰贝阿里", en: "Jebel Ali", code: "AEJAL", region: "阿联酋", area: "中东"}, 
+            {cn: "沙迦", en: "Sharjah", code: "AESJH", region: "阿联酋", area: "中东"}, 
+            {cn: "乌姆盖万", en: "Umm al quwain", code: "AEUAQ", region: "阿联酋", area: "中东"}, 
+            {cn: "哈伊马角", en: "Ras Al Khaimah", code: "AERAK", region: "阿联酋", area: "中东"}, 
+        ];
+        
+        // 示例价格数据
+        let priceData = [
+            {origin: "上海", destination: "曼萨尼约", carrier: "MAERSK", gp20: 1250, gp40: 2050, hc40: 2150, nor40: 2300, valid: "2023-08-01 至 2023-08-31", region: "墨西哥", area: "墨西哥"},
+            {origin: "宁波", destination: "卡亚俄", carrier: "COSCO", gp20: 1350, gp40: 2200, hc40: 2300, nor40: 2450, valid: "2023-08-01 至 2023-08-31", region: "秘鲁", area: "南美西"},
+            {origin: "深圳", destination: "桑托斯", carrier: "MSC", gp20: 1450, gp40: 2350, hc40: 2450, nor40: 2600, valid: "2023-08-01 至 2023-08-31", region: "巴西", area: "南美东"},
+            {origin: "上海", destination: "曼萨尼约", carrier: "CMA CGM", gp20: 1200, gp40: 1950, hc40: 2050, nor40: 2200, valid: "2023-08-01 至 2023-08-31", region: "墨西哥", area: "墨西哥"},
+            {origin: "青岛", destination: "巴拿马城", carrier: "EVERGREEN", gp20: 1300, gp40: 2150, hc40: 2250, nor40: 2400, valid: "2023-08-01 至 2023-08-31", region: "巴拿马", area: "中美洲"},
+            {origin: "天津", destination: "金斯敦", carrier: "HMM", gp20: 1400, gp40: 2300, hc40: 2400, nor40: 2550, valid: "2023-08-01 至 2023-08-31", region: "牙买加", area: "加勒比"},
+            {origin: "香港", destination: "科隆自由贸易区", carrier: "ONE", gp20: 1280, gp40: 2100, hc40: 2200, nor40: 2350, valid: "2023-08-01 至 2023-08-31", region: "巴拿马", area: "中美洲"},
+            {origin: "重庆", destination: "瓜亚基尔", carrier: "HPL", gp20: 1550, gp40: 2450, hc40: 2550, nor40: 2700, valid: "2023-08-01 至 2023-08-31", region: "厄瓜多尔", area: "南美西"},
+            {origin: "武汉", destination: "布宜诺斯艾利斯", carrier: "ZIM", gp20: 1650, gp40: 2650, hc40: 2750, nor40: 2900, valid: "2023-08-01 至 2023-08-31", region: "阿根廷", area: "南美东"},
+            {origin: "大连", destination: "曼萨尼约", carrier: "YML", gp20: 1220, gp40: 2000, hc40: 2100, nor40: 2250, valid: "2023-08-01 至 2023-08-31", region: "墨西哥", area: "墨西哥"},
+            {origin: "福州", destination: "太子港", carrier: "OOCL", gp20: 1380, gp40: 2250, hc40: 2350, nor40: 2500, valid: "2023-08-01 至 2023-08-31", region: "海地", area: "加勒比"},
+            {origin: "广州", destination: "卡塔赫纳", carrier: "HPL", gp20: 1420, gp40: 2320, hc40: 2420, nor40: 2570, valid: "2023-08-01 至 2023-08-31", region: "哥伦比亚", area: "南美西"},
+            {origin: "厦门", destination: "瓜亚基尔", carrier: "CMA CGM", gp20: 1470, gp40: 2370, hc40: 2470, nor40: 2620, valid: "2023-08-01 至 2023-08-31", region: "厄瓜多尔", area: "南美西"}
+        ];
+        
+        // DOM元素
+        const originInput = document.getElementById('origin');
+        const destinationInput = document.getElementById('destination');
+        const originDropdown = document.getElementById('origin-dropdown');
+        const destinationDropdown = document.getElementById('destination-dropdown');
+        const searchBtn = document.getElementById('search-btn');
+        const priceTableBody = document.getElementById('price-table-body');
+        const downloadTemplateBtn = document.getElementById('download-template');
+        const excelUpload = document.getElementById('excel-upload');
+        const notification = document.getElementById('notification');
+        const validationSection = document.getElementById('validation-section');
+        const validationList = document.getElementById('validation-list');
+        const validationCount = document.getElementById('validation-count');
+        const closeValidation = document.getElementById('close-validation');
+        const closeResultsBtn = document.getElementById('close-results');
+        const resultsCount = document.getElementById('results-count');
+        const resultsCard = document.getElementById('results-card');
+        const searchCard = document.getElementById('search-card');
+        const dataCard = document.getElementById('data-card');
+        const tabs = document.querySelectorAll('.tab');
+        const fileName = document.getElementById('file-name');
+        const compareBtn = document.getElementById('compare-btn');
+        const chartSection = document.getElementById('chart-section');
+        const chartClose = document.getElementById('chart-close');
+        const priceChart = document.getElementById('price-chart');
+        const modeToggle = document.getElementById('mode-toggle');
+        const analysisCards = document.getElementById('analysis-cards');
+        
+        // 密码验证相关元素
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordError = document.getElementById('password-error');
+        const submitPassword = document.getElementById('submit-password');
+        const cancelPassword = document.getElementById('cancel-password');
+        const securityWarning = document.getElementById('security-warning');
+        const successCountDisplay = document.getElementById('success-count');
+        const errorCountDisplay = document.getElementById('error-count');
+        
+        // 密码错误计数
+        let passwordAttempts = 3;
+        
+        // 初始化港口下拉列表
+        function initPortDropdown(input, dropdown, ports) {
+            input.addEventListener('focus', () => {
+                populateDropdown(dropdown, ports);
+                dropdown.style.display = 'block';
+            });
+            
+            input.addEventListener('input', () => {
+                const searchTerm = input.value.toLowerCase();
+                const filteredPorts = ports.filter(port => 
+                    port.cn.toLowerCase().includes(searchTerm) || 
+                    port.en.toLowerCase().includes(searchTerm) ||
+                    port.code.toLowerCase().includes(searchTerm) ||
+                    (port.province && port.province.toLowerCase().includes(searchTerm))
+                );
+                
+                populateDropdown(dropdown, filteredPorts);
+                dropdown.style.display = filteredPorts.length ? 'block' : 'none';
+            });
+            
+            // 点击其他地方关闭下拉
+            document.addEventListener('click', (e) => {
+                if (e.target !== input) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
+        
+        // 填充下拉列表
+        function populateDropdown(dropdown, ports) {
+            dropdown.innerHTML = '';
+            
+            ports.forEach(port => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                
+                // 起运港显示省份和区域（中国）
+                if (dropdown.id === 'origin-dropdown') {
+                    item.innerHTML = `
+                        <div class="port-info">
+                            <div class="port-name">${port.cn} / ${port.en}</div>
+                            <div class="port-code">${port.code}</div>
+                            <div class="port-details">
+                                <span class="port-province">${port.province}</span>
+                                <span class="port-region">${port.region}</span>
+                            </div>
+                        </div>
+                    `;
+                } 
+                // 目的港显示区域和地区
+                else {
+                    item.innerHTML = `
+                        <div class="port-info">
+                            <div class="port-name">${port.cn} / ${port.en}</div>
+                            <div class="port-code">${port.code}</div>
+                            <div class="port-details">
+                                <span class="port-region">${port.region}</span>
+                                <span class="port-area">${port.area}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                item.addEventListener('click', () => {
+                    const input = dropdown.previousElementSibling;
+                    input.value = `${port.cn};${port.en};${port.code}`;
+                    dropdown.style.display = 'none';
+                });
+                
+                dropdown.appendChild(item);
+            });
+        }
+        
+        // 搜索价格
+        function searchPrices() {
+            const origin = originInput.value.split(';')[0];
+            const destination = destinationInput.value.split(';')[0];
+            
+            // 如果没有选择港口，显示所有数据
+            const results = !origin && !destination ? priceData : 
+                priceData.filter(item => 
+                    (!origin || item.origin === origin) && 
+                    (!destination || item.destination === destination)
+                );
+            
+            displayPrices(results);
+            resultsCount.textContent = `找到 ${results.length} 条记录`;
+            
+            // 显示结果卡片，隐藏搜索卡片
+            resultsCard.classList.remove('hidden');
+            searchCard.classList.add('hidden');
+            
+            // 更新价格分析
+            updateAnalysisCards(results);
+        }
+        
+        // 根据船公司获取颜色类
+        function getCarrierColorClass(carrier) {
+            // 将船公司名称转为小写并移除空格，以便匹配
+            const normalizedCarrier = carrier.toLowerCase().replace(/\s+/g, '');
+            
+            if (normalizedCarrier.includes('maersk')) {
+                return 'carrier-maersk';
+            } else if (normalizedCarrier.includes('cosco')) {
+                return 'carrier-cosco';
+            } else if (normalizedCarrier.includes('msc')) {
+                return 'carrier-msc';
+            } else if (normalizedCarrier.includes('cmacgm') || normalizedCarrier.includes('cma')) {
+                return 'carrier-cma';
+            } else if (normalizedCarrier.includes('evergreen')) {
+                return 'carrier-evergreen';
+            } else if (normalizedCarrier.includes('hmm')) {
+                return 'carrier-hmm';
+            } else if (normalizedCarrier.includes('one')) {
+                return 'carrier-one';
+            } else if (normalizedCarrier.includes('hpl')) {
+                return 'carrier-hpl';
+            } else if (normalizedCarrier.includes('zim')) {
+                return 'carrier-zim';
+            } else if (normalizedCarrier.includes('yml')) {
+                return 'carrier-yml';
+            } else if (normalizedCarrier.includes('oocl')) {
+                return 'carrier-oocl';
+            }
+            return 'carrier-default';
+        }
+        
+        // 显示价格表格
+        function displayPrices(prices) {
+            priceTableBody.innerHTML = '';
+            
+            if (prices.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="10" style="text-align: center; padding: 30px; color: #777;">未找到匹配的价格数据</td>`;
+                priceTableBody.appendChild(row);
+                return;
+            }
+            
+            prices.forEach(item => {
+                const row = document.createElement('tr');
+                const carrierClass = getCarrierColorClass(item.carrier);
+                row.classList.add(carrierClass);
+                
+                row.innerHTML = `
+                    <td>${item.carrier}</td>
+                    <td>${item.origin}</td>
+                    <td>${item.destination}</td>
+                    <td>$${item.gp20}</td>
+                    <td>$${item.gp40}</td>
+                    <td>$${item.hc40}</td>
+                    <td>$${item.nor40}</td>
+                    <td>${item.valid}</td>
+                    <td>${item.region}</td>
+                    <td>${item.area}</td>
+                    <td>${item.remarks}</td>
+                `;
+                
+                priceTableBody.appendChild(row);
+            });
+        }
+        
+        // 下载Excel模板
+        function downloadTemplate() {
+            // 创建工作簿
+            const wb = XLSX.utils.book_new();
+            
+            // 创建表头
+            const headers = ["起运港", "目的港", "船司", "20GP", "40GP", "40HC", "40NOR", "有效期范围", "国家", "航线","备注" ];
+            const ws = XLSX.utils.aoa_to_sheet([headers]);
+            
+            // 添加示例数据
+            const exampleData = [
+                ["上海", "曼萨尼约;MANZANILLO;MXZLO", "MAERSK", 1250, 2050, 2150, 2300, "2023-08-01 至 2023-08-31", "墨西哥", "墨西哥","isps14美金"],
+                ["宁波", "卡亚俄;CALLAO;PECLL", "COSCO", 1350, 2200, 2300, 2450, "2023-08-01 至 2023-08-31", "秘鲁", "南美西","isps14美金"]
+            ];
+            XLSX.utils.sheet_add_aoa(ws, exampleData, {origin: 'A2'});
+            
+            // 添加到工作簿
+            XLSX.utils.book_append_sheet(wb, ws, "海运价格模板");
+            
+            // 生成Excel文件并下载
+            XLSX.writeFile(wb, "海运价格模板.xlsx");
+            
+            showNotification("模板下载成功！");
+        }
+        
+        // 验证目的港格式
+        function validateDestination(destInput) {
+            // 分割输入值
+            const parts = destInput.split(';').filter(p => p.trim() !== '');
+            
+            // 检查是否为空
+            if (parts.length === 0) return false;
+            
+            // 尝试匹配目的港
+            const matchedPort = destinationPorts.find(port => {
+                // 检查每个部分是否匹配港口的中文、英文或代码
+                return parts.some(part => 
+                    port.cn === part || 
+                    port.en === part || 
+                    port.code === part
+                );
+            });
+            
+            return matchedPort ? true : false;
+        }
+        
+        // 上传Excel文件
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 显示文件名
+            fileName.textContent = `已选择: ${file.name}`;
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                // 获取第一个工作表
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                
+                // 转换为JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                if (jsonData.length > 0) {
+                    // 验证目的港格式
+                    let validCount = 0;
+                    let invalidCount = 0;
+                    validationList.innerHTML = '';
+                    
+                    // 显示验证区域
+                    validationSection.style.display = 'block';
+                    validationSection.classList.remove('hide');
+                    
+                    // 验证每一行
+                    jsonData.forEach((item, index) => {
+                        const destInput = item['目的港'] || '';
+                        const isValid = validateDestination(destInput);
+                        
+                        if (isValid) {
+                            validCount++;
+                            validationList.innerHTML += `
+                                <div class="validation-item success">
+                                    <span class="status-indicator success-indicator"></span>
+                                    第 ${index+1} 行: 目的港 "${destInput}" 验证通过
+                                </div>
+                            `;
+                        } else {
+                            invalidCount++;
+                            validationList.innerHTML += `
+                                <div class="validation-item error">
+                                    <span class="status-indicator error-indicator"></span>
+                                    第 ${index+1} 行: 目的港 "${destInput}" 格式错误，未匹配到任何港口
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    // 更新统计显示
+                    successCountDisplay.textContent = validCount;
+                    errorCountDisplay.textContent = invalidCount;
+                    
+                    // 如果有无效行，不更新数据
+                    if (invalidCount > 0) {
+                        showNotification(`上传失败！有 ${invalidCount} 行目的港格式错误`, true);
+                    } else {
+                        // 更新价格数据
+                        priceData = jsonData.map(item => ({
+                            origin: item['起运港'],
+                            destination: item['目的港'].split(';')[0], // 使用第一部分作为显示名称
+                            carrier: item['船司'],
+                            gp20: item['20GP'],
+                            gp40: item['40GP'],
+                            hc40: item['40HC'],
+                            nor40: item['40NOR'],
+                            valid: item['有效期范围'],
+                            region: item['国家'],
+                            area: item['航线'],
+                            remarks: item['备注']
+                        }));
+                        
+                        // 重新显示价格
+                        displayPrices(priceData);
+                        
+                        showNotification(`价格数据更新成功！导入 ${validCount} 条记录`);
+                    }
+                    
+                    // 3秒后自动隐藏验证结果
+                    setTimeout(() => {
+                        validationSection.classList.add('hide');
+                        setTimeout(() => {
+                            validationSection.style.display = 'none';
+                        }, 500);
+                    }, 3000);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 显示通知
+        function showNotification(message, isError = false) {
+            notification.innerHTML = `
+                <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
+                <span>${message}</span>
+            `;
+            notification.className = 'notification';
+            
+            if (isError) {
+                notification.classList.add('error');
+            } else {
+                notification.classList.add('show');
+            }
+            
+            // 设置不同的消失时间
+            const timeout = isError ? 5000 : 3000;
+            
+            setTimeout(() => {
+                if (isError) {
+                    notification.classList.remove('error');
+                } else {
+                    notification.classList.remove('show');
+                }
+            }, timeout);
+        }
+        
+        // 切换选项卡
+        function switchTab(tabName) {
+            tabs.forEach(tab => {
+                if (tab.dataset.tab === tabName) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            if (tabName === 'search') {
+                searchCard.classList.remove('hidden');
+                dataCard.classList.add('hidden');
+                resultsCard.classList.add('hidden');
+            } else if (tabName === 'data') {
+                searchCard.classList.add('hidden');
+                dataCard.classList.remove('hidden');
+                resultsCard.classList.add('hidden');
+            }
+        }
+        
+        // 密码验证功能
+        function verifyPassword() {
+            const password = passwordInput.value;
+            
+            // 正确密码为 "4120"
+            if (password === "4120") {
+                // 密码正确，显示数据管理板块
+                passwordModal.classList.remove('show');
+                passwordInput.value = '';
+                passwordError.textContent = '';
+                passwordAttempts = 3; // 重置尝试次数
+                
+                // 切换到数据管理选项卡
+                switchTab('data');
+                
+                // 显示成功通知
+                showNotification('密码验证成功！已进入数据管理页面');
+            } else {
+                // 密码错误
+                passwordAttempts--;
+                
+                if (passwordAttempts <= 0) {
+                    // 密码尝试次数用尽
+                    passwordError.textContent = '密码错误次数过多，系统将在5秒后关闭';
+                    
+                    // 启动关闭倒计时
+                    let countdown = 5;
+                    const countdownInterval = setInterval(() => {
+                        passwordError.textContent = `密码错误次数过多，系统将在 ${countdown} 秒后关闭`;
+                        countdown--;
+                        
+                        if (countdown < 0) {
+                            clearInterval(countdownInterval);
+                            window.close(); // 关闭窗口
+                        }
+                    }, 1000);
+                } else {
+                    // 显示错误消息
+                    passwordError.textContent = '密码错误，请重新输入';
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    
+                    // 添加错误动画效果
+                    passwordInput.style.animation = 'none';
+                    setTimeout(() => {
+                        passwordInput.style.animation = 'shake 0.5s';
+                    }, 10);
+                }
+            }
+        }
+        
+        // 切换密码可见性
+        function togglePasswordVisibility() {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                togglePassword.classList.replace('fa-eye-slash', 'fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                togglePassword.classList.replace('fa-eye', 'fa-eye-slash');
+            }
+        }
+        
+        // 检测开发者工具
+        function detectDevTools() {
+            // 方法1：检测窗口大小变化（开发者工具通常会使窗口尺寸变化）
+            let devToolsOpened = false;
+            
+            const threshold = 160; // 检测阈值
+            
+            function checkDevTools() {
+                const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+                const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+                
+                if ((widthThreshold || heightThreshold) && !devToolsOpened) {
+                    devToolsOpened = true;
+                    showSecurityWarning();
+                }
+            }
+            
+            // 方法2：检测按键事件
+            document.addEventListener('keydown', function(e) {
+                // F12键
+                if (e.key === 'F12') {
+                    e.preventDefault();
+                    showSecurityWarning();
+                }
+                
+                // Ctrl+Shift+I (Windows/Linux) 或 Cmd+Opt+I (Mac)
+                if ((e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                    (e.metaKey && e.altKey && e.key === 'I')) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                }
+                
+                // Ctrl+Shift+C (Windows/Linux) 或 Cmd+Opt+C (Mac)
+                if ((e.ctrlKey && e.shiftKey && e.key === 'C') || 
+                    (e.metaKey && e.altKey && e.key === 'C')) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                }
+            });
+            
+            // 方法3：检测控制台打开
+            (function() {
+                const element = new Image();
+                Object.defineProperty(element, 'id', {
+                    get: function() {
+                        showSecurityWarning();
+                    }
+                });
+                console.log('%c', element);
+            })();
+            
+            // 定期检查
+            setInterval(checkDevTools, 100);
+        }
+        
+        // 显示安全警告
+        function showSecurityWarning() {
+            securityWarning.style.display = 'flex';
+            
+            let countdown = 5;
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = countdown;
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    window.close(); // 关闭窗口
+                }
+            }, 1000);
+        }
+        
+        // 更新价格分析卡片
+        function updateAnalysisCards(prices) {
+            if (prices.length === 0) {
+                analysisCards.innerHTML = '';
+                return;
+            }
+            
+            // 计算最低价格
+            const min20GP = Math.min(...prices.map(p => p.gp20));
+            const min40GP = Math.min(...prices.map(p => p.gp40));
+            const min40HC = Math.min(...prices.map(p => p.hc40));
+            
+            // 计算平均价格
+            const avg20GP = prices.reduce((sum, p) => sum + p.gp20, 0) / prices.length;
+            const avg40GP = prices.reduce((sum, p) => sum + p.gp40, 0) / prices.length;
+            const avg40HC = prices.reduce((sum, p) => sum + p.hc40, 0) / prices.length;
+            
+            // 计算价格范围
+            const max20GP = Math.max(...prices.map(p => p.gp20));
+            const max40GP = Math.max(...prices.map(p => p.gp40));
+            const max40HC = Math.max(...prices.map(p => p.hc40));
+            
+            // 计算价格差异
+            const diff20GP = max20GP - min20GP;
+            const diff40GP = max40GP - min40GP;
+            const diff40HC = max40HC - min40HC;
+            
+            analysisCards.innerHTML = `
+                <div class="analysis-card">
+                    <div class="analysis-card-header">
+                        <i class="fas fa-tag"></i>
+                        <h3>20GP价格分析</h3>
+                    </div>
+                    <div class="analysis-card-value">$${min20GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">最低价格</div>
+                    <div class="analysis-card-value">$${avg20GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">平均价格</div>
+                    <div class="analysis-card-value">$${max20GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">最高价格</div>
+                    <div class="analysis-card-value">$${diff20GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">价格差异</div>
+                </div>
+                
+                <div class="analysis-card">
+                    <div class="analysis-card-header">
+                        <i class="fas fa-tag"></i>
+                        <h3>40GP价格分析</h3>
+                    </div>
+                    <div class="analysis-card-value">$${min40GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">最低价格</div>
+                    <div class="analysis-card-value">$${avg40GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">平均价格</div>
+                    <div class="analysis-card-value">$${max40GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">最高价格</div>
+                    <div class="analysis-card-value">$${diff40GP.toFixed(0)}</div>
+                    <div class="analysis-card-label">价格差异</div>
+                </div>
+                
+                <div class="analysis-card">
+                    <div class="analysis-card-header">
+                        <i class="fas fa-tag"></i>
+                        <h3>40HC价格分析</h3>
+                    </div>
+                    <div class="analysis-card-value">$${min40HC.toFixed(0)}</div>
+                    <div class="analysis-card-label">最低价格</div>
+                    <div class="analysis-card-value">$${avg40HC.toFixed(0)}</div>
+                    <div class="analysis-card-label">平均价格</div>
+                    <div class="analysis-card-value">$${max40HC.toFixed(0)}</div>
+                    <div class="analysis-card-label">最高价格</div>
+                    <div class="analysis-card-value">$${diff40HC.toFixed(0)}</div>
+                    <div class="analysis-card-label">价格差异</div>
+                </div>
+            `;
+        }
+        
+        // 绘制价格对比图表
+        function drawPriceChart(prices) {
+            // 按船公司分组
+            const carriers = [...new Set(prices.map(p => p.carrier))];
+            
+            // 准备图表数据
+            const datasets = [
+                {
+                    label: '20GP',
+                    data: carriers.map(carrier => {
+                        const carrierPrices = prices.filter(p => p.carrier === carrier);
+                        return carrierPrices.length > 0 ? 
+                            Math.min(...carrierPrices.map(p => p.gp20)) : 0;
+                    }),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '40GP',
+                    data: carriers.map(carrier => {
+                        const carrierPrices = prices.filter(p => p.carrier === carrier);
+                        return carrierPrices.length > 0 ? 
+                            Math.min(...carrierPrices.map(p => p.gp40)) : 0;
+                    }),
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '40HC',
+                    data: carriers.map(carrier => {
+                        const carrierPrices = prices.filter(p => p.carrier === carrier);
+                        return carrierPrices.length > 0 ? 
+                            Math.min(...carrierPrices.map(p => p.hc40)) : 0;
+                    }),
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }
+            ];
+            
+            // 如果已有图表实例，销毁它
+            if (window.priceChartInstance) {
+                window.priceChartInstance.destroy();
+            }
+            
+            // 获取canvas上下文
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            
+            // 创建新图表
+            window.priceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: carriers,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '价格 (美元)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '船公司价格对比 (最低价格)',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: $${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 显示图表区域
+            chartSection.classList.add('show');
+        }
+        
+        // 切换白天/黑夜模式
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            
+            // 更新按钮图标
+            const icon = modeToggle.querySelector('i');
+            if (body.classList.contains('dark-mode')) {
+                icon.classList.replace('fa-moon', 'fa-sun');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+            
+            // 重新绘制图表（如果存在）
+            if (window.priceChartInstance) {
+                window.priceChartInstance.destroy();
+                const origin = originInput.value.split(';')[0];
+                const destination = destinationInput.value.split(';')[0];
+                const results = !origin && !destination ? priceData : 
+                    priceData.filter(item => 
+                        (!origin || item.origin === origin) && 
+                        (!destination || item.destination === destination)
+                    );
+                drawPriceChart(results);
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化港口搜索
+            initPortDropdown(originInput, originDropdown, originPorts);
+            initPortDropdown(destinationInput, destinationDropdown, destinationPorts);
+            
+            // 事件监听
+            searchBtn.addEventListener('click', searchPrices);
+            downloadTemplateBtn.addEventListener('click', downloadTemplate);
+            excelUpload.addEventListener('change', handleExcelUpload);
+            closeValidation.addEventListener('click', () => {
+                validationSection.classList.add('hide');
+                setTimeout(() => {
+                    validationSection.style.display = 'none';
+                }, 500);
+            });
+            
+            closeResultsBtn.addEventListener('click', () => {
+                resultsCard.classList.add('hidden');
+                searchCard.classList.remove('hidden');
+                chartSection.classList.remove('show');
+            });
+            
+            // 价格对比按钮
+            compareBtn.addEventListener('click', () => {
+                const origin = originInput.value.split(';')[0];
+                const destination = destinationInput.value.split(';')[0];
+                const results = !origin && !destination ? priceData : 
+                    priceData.filter(item => 
+                        (!origin || item.origin === origin) && 
+                        (!destination || item.destination === destination)
+                    );
+                
+                if (results.length === 0) {
+                    showNotification('没有价格数据可进行对比分析', true);
+                    return;
+                }
+                
+                drawPriceChart(results);
+            });
+            
+            // 关闭图表
+            chartClose.addEventListener('click', () => {
+                chartSection.classList.remove('show');
+            });
+            
+            // 模式切换
+            modeToggle.addEventListener('click', toggleDarkMode);
+            
+            // 检查本地存储中的模式设置
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                modeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
+            }
+            
+            // 选项卡切换
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabName = this.dataset.tab;
+                    
+                    if (tabName === 'data') {
+                        // 显示密码模态框
+                        passwordModal.classList.add('show');
+                        passwordInput.focus();
+                    } else {
+                        // 直接切换到其他选项卡
+                        switchTab(tabName);
+                    }
+                });
+            });
+            
+            // 密码相关事件
+            submitPassword.addEventListener('click', verifyPassword);
+            
+            cancelPassword.addEventListener('click', () => {
+                passwordModal.classList.remove('show');
+                passwordInput.value = '';
+                passwordError.textContent = '';
+            });
+            
+            togglePassword.addEventListener('click', togglePasswordVisibility);
+            
+            passwordInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+            
+            // 添加抖动动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                    20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 默认显示搜索选项卡
+            switchTab('search');
+            
+            // 启用开发者工具检测
+            detectDevTools();
+        });
+    </script>
+</body>
+</html>
